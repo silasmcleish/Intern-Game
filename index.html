@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Are You Smarter Than an Intern?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;900&family=Poppins:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" onerror="window.__qrLibFailed=true;"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js" onerror="window.__firebaseLibFailed=true;"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js" onerror="window.__firebaseLibFailed=true;"></script>
+<style>
+  :root{
+    --black:#000000;
+    --dark-gray:#434449;
+    --medium-gray:#6c7178;
+    --soft-gray:#dbd9d6;
+    --lime:#dce442;
+    --green:#00833e;
+    --white:#ffffff;
+    /* legacy names kept so the rest of the app's CSS/JS (which references
+       these variables) automatically inherits the RNGD palette */
+    --navy:var(--black);
+    --blueprint:var(--dark-gray);
+    --blueprint-line:var(--medium-gray);
+    --orange:var(--lime);
+    --yellow:var(--green);
+    --paper:var(--white);
+    --steel:var(--medium-gray);
+    --ink:var(--black);
+    --good:var(--green);
+    --bad:var(--dark-gray);
+    --cut:14px; /* corner-cut size for the angular RNGD signature shape */
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--black);
+    background-image:
+      linear-gradient(rgba(220,228,66,.09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(220,228,66,.09) 1px, transparent 1px);
+    background-size:28px 28px;
+    background-position:-1px -1px;
+    color:var(--white);
+    font-family:'Poppins',sans-serif;
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .veil{
+    position:fixed; inset:0;
+    background:radial-gradient(ellipse at 50% 0%, rgba(0,0,0,.1), rgba(0,0,0,.94) 72%);
+    pointer-events:none;
+    z-index:0;
+  }
+  .brand-topbar, .brand-footer{
+    width:100%; max-width:920px; box-sizing:border-box;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--medium-gray); position:relative; z-index:1; flex-wrap:wrap; gap:6px;
+  }
+  .brand-topbar{ padding:16px 20px 10px; border-bottom:1px solid var(--dark-gray); }
+  .brand-footer{ padding:16px 20px 30px; border-top:1px solid var(--dark-gray); margin-top:auto; }
+  .brand-footer .word{ font-family:'Archivo',sans-serif; font-weight:900; color:var(--lime); letter-spacing:.03em; font-size:13px; }
+  #app{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:920px;
+    padding:28px 20px 50px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .screen{ display:none; width:100%; flex-direction:column; align-items:center; animation:rise .35s ease; position:relative; }
+  .screen.active{ display:flex; }
+  @keyframes rise{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .accent-cross{ position:absolute; color:var(--green); font-family:'Archivo',sans-serif; font-weight:700; font-size:26px; line-height:1; user-select:none; pointer-events:none; }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    font-size:12px;
+    color:var(--green);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .eyebrow::before{ content:"+"; color:var(--lime); font-family:'Archivo',sans-serif; font-weight:900; }
+
+  h1.title{
+    font-family:'Archivo',sans-serif;
+    font-weight:900;
+    font-size:clamp(28px,6vw,52px);
+    line-height:1.0;
+    text-align:center;
+    margin:0 0 6px;
+    text-transform:uppercase;
+    letter-spacing:-.01em;
+  }
+  h1.title .hi{ color:var(--lime); }
+  .subtitle{ color:var(--medium-gray); text-align:center; max-width:520px; margin:0 0 28px; font-size:15px; }
+
+  .stripe-rule{
+    width:100%; max-width:420px; height:6px; margin:6px 0 28px;
+    background:linear-gradient(90deg, var(--lime) 0 65%, var(--green) 65% 100%);
+    box-shadow:0 2px 0 rgba(0,0,0,.4);
+  }
+
+  /* angular "cut corner" shape — nods to the RNGD wordmark's clipped letterforms */
+  .cut-corners{
+    clip-path: polygon(
+      var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)
+    );
+  }
+
+  .card{
+    background:var(--white);
+    color:var(--black);
+    padding:26px;
+    width:100%;
+    box-shadow:0 14px 34px rgba(0,0,0,.45);
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:6px;
+    background:linear-gradient(90deg, var(--lime) 0 65%, var(--green) 65% 100%);
+  }
+
+  .btn-row{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; width:100%; }
+  button{
+    font-family:'Poppins',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    border:none;
+    padding:15px 26px;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  button:active{ transform:translateY(1px) scale(.99); }
+  .btn-primary{ background:var(--lime); color:var(--black); box-shadow:0 6px 0 var(--green); }
+  .btn-primary:hover{ box-shadow:0 4px 0 var(--green); transform:translateY(2px); }
+  .btn-secondary{ background:transparent; color:var(--white); border:2px solid var(--medium-gray); }
+  .btn-secondary:hover{ border-color:var(--lime); color:var(--lime); }
+  .btn-dark{ background:var(--black); color:var(--white); box-shadow:0 6px 0 var(--dark-gray); border:1px solid var(--dark-gray); }
+  button:disabled{ opacity:.45; cursor:not-allowed; box-shadow:none !important; }
+
+  .mode-card{
+    flex:1; min-width:220px; max-width:320px;
+    background:var(--white); color:var(--black);
+    padding:26px 20px; text-align:center; cursor:pointer;
+    border:3px solid transparent;
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  .mode-card:hover{ border-color:var(--lime); transform:translateY(-3px); }
+  .mode-card .badge-num{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12px;
+    background:var(--black); color:var(--lime); display:inline-block;
+    padding:3px 10px; margin-bottom:10px;
+  }
+  .mode-card h3{ font-family:'Archivo',sans-serif; font-weight:900; text-transform:uppercase; margin:0 0 8px; font-size:18px; }
+  .mode-card p{ color:var(--dark-gray); font-size:13.5px; margin:0; }
+
+  label{ font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--dark-gray); display:block; margin-bottom:5px; }
+  input[type=text]{
+    width:100%; padding:13px 14px; border-radius:4px; border:2px solid var(--soft-gray);
+    font-family:'Poppins',sans-serif; font-size:16px; margin-bottom:16px; background:#fff; color:var(--black);
+  }
+  input[type=text]:focus{ outline:none; border-color:var(--lime); }
+
+  .qcard{
+    background:#fff; border:2px solid var(--soft-gray); padding:16px; margin-bottom:14px;
+  }
+  .qcard textarea, .qcard input[type=text]{ margin-bottom:9px; }
+  .qcard textarea{
+    width:100%; padding:10px 12px; border-radius:4px; border:2px solid var(--soft-gray); font-family:'Poppins',sans-serif;
+    font-size:14.5px; resize:vertical; min-height:44px;
+  }
+  .opt-row{ display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+  .opt-row input[type=text]{ margin:0; flex:1; padding:9px 11px; font-size:14px; }
+  .opt-row input[type=radio]{ width:19px; height:19px; accent-color:var(--green); flex-shrink:0; }
+  .qcard-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .qtag{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 9px; font-weight:700; }
+  .qtag.serious{ background:var(--soft-gray); color:var(--dark-gray); }
+  .qtag.funny{ background:var(--lime); color:var(--black); }
+  .remove-q{ background:none; border:none; color:var(--dark-gray); font-size:13px; font-weight:700; cursor:pointer; padding:4px 8px; }
+  .remove-q:hover{ color:var(--black); text-decoration:underline; }
+
+  .code-box{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:44px; letter-spacing:.18em;
+    background:var(--black); color:var(--lime); padding:14px 26px; text-align:center;
+    margin:6px 0 18px; border:2px solid var(--green);
+  }
+  .qr-wrap{ background:#fff; padding:14px; display:inline-block; margin-bottom:14px; }
+  .link-line{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; background:var(--black); color:var(--soft-gray);
+    padding:10px 14px; border-radius:4px; word-break:break-all; max-width:520px; text-align:center; border:1px solid var(--dark-gray);
+  }
+  .warn{ font-size:12.5px; color:var(--lime); text-align:center; max-width:460px; margin-top:10px; }
+
+  .roster{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0; max-width:600px; }
+  .badge{
+    background:var(--black); color:var(--white); font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+    padding:6px 12px; border:1px solid var(--dark-gray);
+  }
+  .count-line{ font-family:'IBM Plex Mono',monospace; color:var(--lime); font-size:14px; margin-bottom:2px; }
+
+  .timerbar-outer{ width:100%; max-width:520px; height:14px; background:var(--black); overflow:hidden; margin:10px 0 22px; border:2px solid var(--dark-gray); }
+  .timerbar-inner{ height:100%; background:linear-gradient(90deg, var(--lime), var(--green)); transition:width .25s linear; }
+
+  .qprompt{
+    font-family:'Archivo',sans-serif; font-weight:800; text-align:center; font-size:clamp(20px,4vw,32px); line-height:1.15;
+    max-width:760px; margin:6px 0 26px; text-transform:none;
+  }
+  .qtag-live{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:14px; padding:4px 12px; }
+  .opts-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; width:100%; max-width:640px; }
+  @media (max-width:520px){ .opts-grid{ grid-template-columns:1fr; } }
+  .opt-btn{
+    padding:20px 16px; font-size:16px; text-align:left; font-weight:700;
+    background:var(--white); color:var(--black); border:3px solid transparent; box-shadow:0 5px 0 rgba(0,0,0,.35);
+    display:flex; align-items:center; gap:10px;
+  }
+  .opt-btn .shape{ width:16px; height:16px; flex-shrink:0; }
+  .opt-btn:nth-child(1) .shape{ background:var(--lime); }
+  .opt-btn:nth-child(2) .shape{ background:var(--green); }
+  .opt-btn:nth-child(3) .shape{ background:var(--dark-gray); }
+  .opt-btn:nth-child(4) .shape{ background:var(--medium-gray); }
+  .opt-btn.correct{ background:var(--green); color:#fff; border-color:var(--black); }
+  .opt-btn.incorrect{ background:var(--dark-gray); color:#fff; }
+  .opt-btn.dim{ opacity:.35; }
+  .opt-btn:disabled{ cursor:default; }
+
+  .feedback{ font-family:'Archivo',sans-serif; font-weight:900; font-size:clamp(22px,5vw,36px); text-transform:uppercase; text-align:center; margin:14px 0 6px; }
+  .feedback.good{ color:var(--green); }
+  .feedback.bad{ color:var(--dark-gray); }
+
+  table.lb{ width:100%; max-width:520px; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; }
+  table.lb td{ padding:11px 12px; border-bottom:1px solid var(--soft-gray); font-size:14.5px; }
+  table.lb tr:first-child td{ font-weight:700; color:var(--green); font-size:17px; }
+  table.lb td.rank{ width:36px; color:var(--medium-gray); }
+  table.lb td.score{ text-align:right; font-weight:700; }
+
+  .status-pill{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+    background:var(--black); color:var(--lime); padding:5px 12px; margin-bottom:16px; border:1px solid var(--dark-gray);
+  }
+  .spinner{
+    width:34px; height:34px; border-radius:50%; border:4px solid var(--dark-gray); border-top-color:var(--lime);
+    animation:spin 0.9s linear infinite; margin:20px 0;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .hint{ color:var(--medium-gray); font-size:12.5px; text-align:center; max-width:420px; }
+  a.reset-link{ color:var(--medium-gray); font-size:12px; margin-top:22px; text-decoration:underline; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="veil"></div>
+<div class="brand-topbar">
+  <span>RNGD · Intern Program</span>
+  <span>Summer 2026</span>
+</div>
+<div id="storage-warning-banner" style="display:none; width:100%; max-width:920px; background:var(--dark-gray); color:#fff; text-align:center; padding:12px 20px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; border-bottom:2px solid var(--lime);">
+  ⚠ This copy can't sync with other players. Make sure you opened the <strong>published</strong> Claude link (starts with https://claude.ai/...), not a downloaded file.
+</div>
+<div id="app">
+
+  <!-- LANDING -->
+  <div class="screen active" id="screen-landing">
+    <div class="accent-cross" style="top:-6px; left:6%;">+</div>
+    <div class="accent-cross" style="top:38px; right:8%; font-size:19px;">+</div>
+    <div class="eyebrow">Intern Presentation · Intermission</div>
+    <h1 class="title">Are You Smarter<br><span class="hi">Than an Intern?</span></h1>
+    <p class="subtitle">A live trivia round. Starts serious, ends ridiculous.</p>
+    <div class="stripe-rule"></div>
+    <div class="btn-row">
+      <div class="mode-card cut-corners" onclick="goHostSetup()">
+        <div class="badge-num">PROJECTOR</div>
+        <h3>I'm running the game</h3>
+        <p>Set up questions, show the QR code, and control the room from here.</p>
+      </div>
+      <div class="mode-card cut-corners" onclick="goJoinName()">
+        <div class="badge-num">PHONE</div>
+        <h3>I'm playing</h3>
+        <p>Scanned the QR code? Enter your name and jump in.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOST: SETUP -->
+  <div class="screen" id="screen-host-setup">
+    <div class="eyebrow">Host Setup</div>
+    <h1 class="title" style="font-size:30px;">Build The Round</h1>
+    <p class="subtitle">Placeholder questions are loaded below — edit the text, options, and mark the correct answer. Order them serious → silly for the best pacing.</p>
+    <div class="card cut-corners" style="max-width:700px; margin-bottom:16px;">
+      <label>Published Link (only needed if this page can't detect its own address)</label>
+      <input type="text" id="published-url-input" placeholder="https://yourname.github.io/intern-game/ (leave blank if hosted normally)">
+      <p class="hint" style="text-align:left; margin:-8px 0 4px;">If you're hosting this on a real website (GitHub Pages, Netlify, etc.), leave this blank — it'll detect the address automatically. Only fill this in if you're running it inside a Claude artifact preview.</p>
+    </div>
+    <div class="card" style="max-width:700px;">
+      <div id="q-list"></div>
+      <button class="btn-secondary" style="width:100%; margin-bottom:16px;" onclick="addQuestion()">+ Add Question</button>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="launchSession()">Create Session &amp; Show QR →</button>
+      </div>
+    </div>
+    <p class="hint" style="margin-top:16px;">Every player needs to open this same site's link — not a downloaded copy of this file — or their device won't be able to sync.</p>
+  </div>
+
+  <!-- HOST: LOBBY -->
+  <div class="screen" id="screen-host-lobby">
+    <div class="eyebrow">Session Live</div>
+    <h1 class="title" style="font-size:30px;">Scan In</h1>
+    <div class="code-box cut-corners" id="lobby-code">----</div>
+    <div class="qr-wrap"><div id="qr-canvas"></div></div>
+    <div class="link-line" id="lobby-link"></div>
+    <div class="btn-row" style="margin:8px 0 4px;">
+      <button class="btn-secondary" onclick="copyJoinLink()">Copy Link</button>
+      <button class="btn-secondary" onclick="reloadQr()">QR not loading? Retry</button>
+    </div>
+    <p class="warn" id="qr-error-note" style="display:none;">QR image didn't load (likely a network/firewall block). Use "Copy Link" above and drop it directly on your slide, or have people type the session code manually.</p>
+    <div class="count-line" id="lobby-count">0 interns in the room</div>
+    <div class="roster" id="lobby-roster"></div>
+    <div class="btn-row" style="margin-top:10px;">
+      <button class="btn-primary" onclick="hostStartGame()">Start Game →</button>
+    </div>
+  </div>
+
+  <!-- HOST: LIVE QUESTION -->
+  <div class="screen" id="screen-host-live">
+    <div class="status-pill" id="host-progress">Question 1</div>
+    <div class="qtag-live" id="host-qtag"></div>
+    <div class="qprompt" id="host-qtext"></div>
+    <div class="opts-grid" id="host-opts"></div>
+    <div class="timerbar-outer"><div class="timerbar-inner" id="host-timerbar" style="width:100%;"></div></div>
+    <div class="btn-row">
+      <button class="btn-dark" id="host-reveal-btn" onclick="hostReveal()">Reveal Answer</button>
+    </div>
+  </div>
+
+  <!-- HOST: REVEAL / LEADERBOARD -->
+  <div class="screen" id="screen-host-reveal">
+    <div class="status-pill" id="host-reveal-progress">Question 1 — Answer</div>
+    <div class="qprompt" id="host-reveal-qtext"></div>
+    <div class="opts-grid" id="host-reveal-opts"></div>
+    <div class="btn-row" style="margin-top:22px;">
+      <button class="btn-secondary" onclick="hostShowLeaderboard()">Show Leaderboard</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-host-board">
+    <div class="eyebrow" id="board-label">Standings</div>
+    <h1 class="title" style="font-size:30px;">Leaderboard</h1>
+    <div class="card" style="max-width:520px;">
+      <table class="lb" id="board-table"></table>
+    </div>
+    <div class="btn-row" style="margin-top:20px;">
+      <button class="btn-primary" id="host-next-btn" onclick="hostNext()">Next Question →</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-host-end">
+    <div class="eyebrow">Final Results</div>
+    <h1 class="title">Champion Intern-Slayer</h1>
+    <div class="card" style="max-width:520px;">
+      <table class="lb" id="final-table"></table>
+    </div>
+    <p class="hint" style="margin-top:18px;">Back to the main presentation whenever you're ready.</p>
+  </div>
+
+  <!-- PLAYER: NAME -->
+  <div class="screen" id="screen-join-name">
+    <div class="eyebrow">Join The Round</div>
+    <h1 class="title" style="font-size:30px;">Suit Up</h1>
+    <div class="card" style="max-width:380px;">
+      <label>Session Code</label>
+      <input type="text" id="join-code-input" placeholder="e.g. HK4T" maxlength="6" style="text-transform:uppercase;">
+      <label>Your Name</label>
+      <input type="text" id="join-name-input" placeholder="First name is fine" maxlength="24">
+      <button class="btn-primary" style="width:100%;" onclick="playerJoin()">Join Game</button>
+      <p class="hint" id="join-error" style="color:var(--bad); margin-top:10px; display:none;"></p>
+    </div>
+  </div>
+
+  <!-- PLAYER: LOBBY WAIT -->
+  <div class="screen" id="screen-join-wait">
+    <div class="eyebrow">You're In</div>
+    <h1 class="title" style="font-size:30px;" id="join-wait-name">Welcome</h1>
+    <div class="spinner"></div>
+    <p class="hint">Eyes up front — the game starts when the host is ready.</p>
+  </div>
+
+  <!-- PLAYER: LIVE QUESTION -->
+  <div class="screen" id="screen-join-live">
+    <div class="status-pill" id="p-progress">Question 1</div>
+    <div class="qprompt" id="p-qtext"></div>
+    <div class="opts-grid" id="p-opts"></div>
+    <div class="timerbar-outer"><div class="timerbar-inner" id="p-timerbar" style="width:100%;"></div></div>
+    <p class="hint" id="p-locked" style="display:none;">Locked in — hang tight for the reveal.</p>
+  </div>
+
+  <!-- PLAYER: REVEAL -->
+  <div class="screen" id="screen-join-reveal">
+    <div class="feedback" id="p-feedback">Correct!</div>
+    <div class="qprompt" id="p-reveal-text" style="font-size:18px; color:var(--steel);"></div>
+    <div class="hint">Check the big screen for the leaderboard.</div>
+  </div>
+
+  <!-- PLAYER: WAITING BETWEEN -->
+  <div class="screen" id="screen-join-between">
+    <div class="eyebrow">Standby</div>
+    <div class="spinner"></div>
+    <p class="hint">Next question coming up on the big screen.</p>
+  </div>
+
+  <!-- PLAYER: END -->
+  <div class="screen" id="screen-join-end">
+    <div class="eyebrow">Final Score</div>
+    <h1 class="title" style="font-size:30px;">Nice Work</h1>
+    <div class="card" style="max-width:360px; text-align:center;">
+      <p style="font-family:'IBM Plex Mono',monospace; font-size:14px; color:#666; margin:0 0 6px;">YOUR SCORE</p>
+      <p style="font-family:'Archivo',sans-serif; font-weight:900; font-size:44px; margin:0; color:var(--black);" id="final-score">0</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="brand-footer">
+  <span class="word">RNGD</span>
+  <span>Renegade Thinking. Revolutionary Results.</span>
+</div>
+
+<script>
+/* ================================================================
+   FIREBASE SETUP — DO THIS FIRST
+   1. Go to https://console.firebase.google.com → Add project (free).
+   2. In your project, click "Build > Realtime Database" → Create Database
+      → start in TEST MODE (fine for a short-lived event; see note below).
+   3. Click the gear icon > Project settings > scroll to "Your apps" >
+      click the </> (web) icon > register an app (nickname can be anything,
+      no hosting needed) > copy the firebaseConfig object it gives you.
+   4. Paste your values into the object right below, replacing the
+      PASTE_YOUR_... placeholders.
+   Security note: "test mode" makes the database world-readable/writable
+   for ~30 days, which is fine for a one-time intermission game. If you'll
+   reuse this, tighten the rules afterward in the Firebase console.
+   ================================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyA2Sb7Wkz5jwGQXKrYFdl0-4hl7Zp9_jdA",
+  authDomain: "smarter-than-an-intern.firebaseapp.com",
+  databaseURL: "https://smarter-than-an-intern-default-rtdb.firebaseio.com",
+  projectId: "smarter-than-an-intern",
+  storageBucket: "smarter-than-an-intern.firebasestorage.app",
+  messagingSenderId: "10950789932",
+  appId: "1:10950789932:web:e31b12fd74c88dcadf7a89",
+};
+let db = null;
+try{
+  if(typeof firebase !== 'undefined' && !window.__firebaseLibFailed){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+  }
+}catch(e){ console.error('Firebase init failed', e); }
+
+function firebaseIsConfigured(){
+  return !!db && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('PASTE_YOUR') === -1;
+}
+
+/* ---------------- storage helpers (Firebase-backed) ----------------
+   Same function names/shapes as before so the rest of the app doesn't
+   need to change: storGet/storSet return or accept plain JS objects;
+   storList returns an array of matching key strings. */
+async function storGet(key){
+  if(!firebaseIsConfigured()) return null;
+  try{
+    const snap = await db.ref('data/' + key).once('value');
+    return snap.exists() ? snap.val() : null;
+  }catch(e){ console.error('storGet failed', key, e); return null; }
+}
+async function storSet(key, value){
+  if(!firebaseIsConfigured()) return false;
+  try{ await db.ref('data/' + key).set(value); return true; }
+  catch(e){ console.error('storSet failed', key, e); return false; }
+}
+async function storList(prefix){
+  if(!firebaseIsConfigured()) return [];
+  try{
+    const snap = await db.ref('data').orderByKey().startAt(prefix).endAt(prefix + '\uf8ff').once('value');
+    const keys = [];
+    snap.forEach(child => { keys.push(child.key); });
+    return keys;
+  }catch(e){ console.error('storList failed', prefix, e); return []; }
+}
+
+/* ---------------- shared constants ---------------- */
+const QUESTION_SECONDS = 20;
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+function genCode(len){
+  let s='';
+  for(let i=0;i<len;i++) s += CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];
+  return s;
+}
+function genId(){ return Math.random().toString(36).slice(2,10); }
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ---------------- default placeholder questions ---------------- */
+function defaultQuestions(){
+  return [
+    { text:"[Edit me] What year was RNGD founded / this office opened?", options:["Option A","Option B","Option C","Option D"], correct:0, tag:'serious' },
+    { text:"[Edit me] How many active job sites did our intern class visit this summer?", options:["Option A","Option B","Option C","Option D"], correct:1, tag:'serious' },
+    { text:"[Edit me] Which department did the most interns rotate through?", options:["Option A","Option B","Option C","Option D"], correct:2, tag:'serious' },
+    { text:"[Edit me] True or false style — pick the trade most interns said surprised them most.", options:["Option A","Option B","Option C","Option D"], correct:0, tag:'serious' },
+    { text:"[Edit me, funny] Which intern was (jokingly) most likely to get lost on a job site?", options:["Name A","Name B","Name C","Name D"], correct:1, tag:'funny' },
+    { text:"[Edit me, funny] What was the most-used phrase by our managers this summer?", options:["Option A","Option B","Option C","Option D"], correct:2, tag:'funny' },
+    { text:"[Edit me, funny] Which snack disappeared fastest from the office kitchen?", options:["Option A","Option B","Option C","Option D"], correct:0, tag:'funny' },
+    { text:"[Edit me, funny] Best guess: how many cups of coffee did the intern class drink combined?", options:["Option A","Option B","Option C","Option D"], correct:3, tag:'funny' }
+  ];
+}
+
+let draftQuestions = [];
+
+/* ---------------- LANDING ---------------- */
+function goHostSetup(){
+  draftQuestions = defaultQuestions();
+  renderQList();
+  showScreen('screen-host-setup');
+}
+function goJoinName(){
+  showScreen('screen-join-name');
+}
+
+/* ---------------- HOST SETUP UI ---------------- */
+function renderQList(){
+  const wrap = document.getElementById('q-list');
+  wrap.innerHTML = '';
+  draftQuestions.forEach((q, qi)=>{
+    const div = document.createElement('div');
+    div.className = 'qcard';
+    div.innerHTML = `
+      <div class="qcard-top">
+        <span class="qtag ${q.tag==='funny'?'funny':'serious'}">${q.tag==='funny'?'Funny':'Serious'}</span>
+        <button class="remove-q" onclick="removeQuestion(${qi})">Remove ✕</button>
+      </div>
+      <textarea placeholder="Question text" oninput="draftQuestions[${qi}].text=this.value">${escapeHtml(q.text)}</textarea>
+      ${q.options.map((opt,oi)=>`
+        <div class="opt-row">
+          <input type="radio" name="correct-${qi}" ${q.correct===oi?'checked':''} onchange="draftQuestions[${qi}].correct=${oi}">
+          <input type="text" value="${escapeHtml(opt)}" placeholder="Option ${oi+1}" oninput="draftQuestions[${qi}].options[${oi}]=this.value">
+        </div>`).join('')}
+      <div style="margin-top:6px;">
+        <label style="display:inline-block; margin-right:10px;">
+          <input type="radio" name="tag-${qi}" ${q.tag==='serious'?'checked':''} onchange="draftQuestions[${qi}].tag='serious'; renderQList();" style="accent-color:var(--blueprint);"> Serious
+        </label>
+        <label style="display:inline-block;">
+          <input type="radio" name="tag-${qi}" ${q.tag==='funny'?'checked':''} onchange="draftQuestions[${qi}].tag='funny'; renderQList();" style="accent-color:var(--orange);"> Funny
+        </label>
+      </div>
+    `;
+    wrap.appendChild(div);
+  });
+}
+function escapeHtml(s){ const d=document.createElement('div'); d.innerText = s; return d.innerHTML; }
+function addQuestion(){
+  draftQuestions.push({ text:"New question — edit me", options:["Option A","Option B","Option C","Option D"], correct:0, tag:'serious' });
+  renderQList();
+}
+function removeQuestion(i){
+  draftQuestions.splice(i,1);
+  renderQList();
+}
+
+/* ---------------- HOST: LAUNCH SESSION ---------------- */
+let SESSION = null; // {code}
+let hostState = { qIndex:-1, phase:'lobby' };
+let lobbyPollTimer=null, hostPollTimer=null;
+
+(function checkFirebaseConfiguredOnLoad(){
+  const banner = document.getElementById('storage-warning-banner');
+  if(!banner) return;
+  if(window.__firebaseLibFailed || typeof firebase === 'undefined'){
+    banner.innerHTML = '⚠ The Firebase script itself was blocked from loading (likely this environment\'s network sandbox) — this isn\'t a config problem. This page needs to be hosted as a real website (e.g. GitHub Pages) instead of a Claude artifact preview.';
+    banner.style.display = 'block';
+  } else if(!firebaseIsConfigured()){
+    banner.innerHTML = '⚠ Firebase isn\'t set up yet. Open this file\'s code and paste your Firebase project config near the top of the &lt;script&gt; section (look for "FIREBASE SETUP").';
+    banner.style.display = 'block';
+  }
+})();
+
+async function launchSession(){
+  if(draftQuestions.length === 0){ alert('Add at least one question first.'); return; }
+  if(!firebaseIsConfigured()){ alert('Firebase isn\'t configured yet — see the yellow banner at the top, or the FIREBASE SETUP comment in the code.'); return; }
+  const pastedUrl = document.getElementById('published-url-input').value.trim();
+  const autoUrl = window.location.href;
+  const looksReal = /^https?:\/\//i.test(autoUrl) && autoUrl.indexOf('about:') !== 0;
+  if(!pastedUrl && !looksReal){
+    alert('Paste your site\'s real https:// link in the box above — this environment can\'t auto-detect its own address.');
+    return;
+  }
+  const code = genCode(4);
+  SESSION = { code };
+  await storSet(`sess:${code}:meta`, { questions:draftQuestions, createdAt:Date.now() });
+  await storSet(`sess:${code}:state`, { phase:'lobby', qIndex:-1, qStartTs:0 });
+
+  document.getElementById('lobby-code').innerText = code;
+  const url = buildJoinUrl(code, pastedUrl);
+  document.getElementById('lobby-link').innerText = url;
+  currentJoinUrl = url;
+  renderQrImage(url);
+
+  showScreen('screen-host-lobby');
+  pollLobbyCount();
+  lobbyPollTimer = setInterval(pollLobbyCount, 2500);
+}
+
+function buildJoinUrl(code, baseUrlOverride){
+  const base = (baseUrlOverride || window.location.href).split('?')[0].split('#')[0];
+  return `${base}?code=${code}`;
+}
+
+let currentJoinUrl = null;
+
+function renderQrImage(url){
+  const container = document.getElementById('qr-canvas');
+  document.getElementById('qr-error-note').style.display = 'none';
+  container.style.display = 'block';
+  container.innerHTML = '';
+  try{
+    if(window.__qrLibFailed || typeof QRCode === 'undefined'){ throw new Error('QR library unavailable'); }
+    new QRCode(container, { text:url, width:220, height:220, colorDark:"#000000", colorLight:"#ffffff" });
+  }catch(e){
+    handleQrError();
+  }
+}
+function reloadQr(){
+  if(currentJoinUrl) renderQrImage(currentJoinUrl);
+}
+function handleQrError(){
+  document.getElementById('qr-canvas').style.display = 'none';
+  document.getElementById('qr-error-note').style.display = 'block';
+}
+async function copyJoinLink(){
+  try{
+    await navigator.clipboard.writeText(currentJoinUrl);
+    const btn = event.target;
+    const old = btn.innerText;
+    btn.innerText = 'Copied!';
+    setTimeout(()=>{ btn.innerText = old; }, 1500);
+  }catch(e){
+    alert(currentJoinUrl);
+  }
+}
+
+async function pollLobbyCount(){
+  const keys = await storList(`sess:${SESSION.code}:player:`);
+  document.getElementById('lobby-count').innerText = `${keys.length} intern${keys.length===1?'':'s'} in the room`;
+  // show up to 40 badges by fetching names (cheap during lobby, low frequency)
+  const roster = document.getElementById('lobby-roster');
+  roster.innerHTML = '';
+  const subset = keys.slice(0,40);
+  const vals = await Promise.all(subset.map(k=>storGet(k)));
+  vals.forEach(v=>{ if(v && v.name){ const b=document.createElement('div'); b.className='badge'; b.innerText=v.name; roster.appendChild(b); } });
+}
+
+async function hostStartGame(){
+  clearInterval(lobbyPollTimer);
+  hostState.qIndex = 0;
+  await goToQuestion(hostState.qIndex);
+}
+
+/* ---------------- HOST: RUNNING QUESTIONS ---------------- */
+let hostMeta = null;
+async function goToQuestion(qi){
+  if(!hostMeta){ hostMeta = await storGet(`sess:${SESSION.code}:meta`); }
+  const q = hostMeta.questions[qi];
+  const startTs = Date.now();
+  await storSet(`sess:${SESSION.code}:state`, { phase:'question', qIndex:qi, qStartTs:startTs, seconds:QUESTION_SECONDS });
+
+  document.getElementById('host-progress').innerText = `Question ${qi+1} of ${hostMeta.questions.length}`;
+  const tagEl = document.getElementById('host-qtag');
+  tagEl.innerText = q.tag === 'funny' ? '+ Getting silly' : '+ Warm-up';
+  tagEl.style.background = q.tag==='funny' ? 'var(--lime)' : 'var(--dark-gray)';
+  tagEl.style.color = q.tag==='funny' ? '#000' : '#fff';
+  document.getElementById('host-qtext').innerText = q.text;
+  const optsWrap = document.getElementById('host-opts');
+  optsWrap.innerHTML = q.options.map(o=>`<div class="opt-btn" style="cursor:default;"><span class="shape"></span>${escapeHtml(o)}</div>`).join('');
+
+  showScreen('screen-host-live');
+  runHostTimer(startTs);
+}
+
+function runHostTimer(startTs){
+  const bar = document.getElementById('host-timerbar');
+  clearInterval(hostPollTimer);
+  hostPollTimer = setInterval(()=>{
+    const elapsed = (Date.now()-startTs)/1000;
+    const pct = Math.max(0, 100 - (elapsed/QUESTION_SECONDS)*100);
+    bar.style.width = pct+'%';
+    if(pct<=0){ clearInterval(hostPollTimer); }
+  }, 150);
+}
+
+async function hostReveal(){
+  clearInterval(hostPollTimer);
+  const qi = hostState.qIndex;
+  const q = hostMeta.questions[qi];
+  await storSet(`sess:${SESSION.code}:state`, { phase:'reveal', qIndex:qi, qStartTs:0, seconds:QUESTION_SECONDS });
+
+  document.getElementById('host-reveal-progress').innerText = `Question ${qi+1} — Answer`;
+  document.getElementById('host-reveal-qtext').innerText = q.text;
+  const wrap = document.getElementById('host-reveal-opts');
+  wrap.innerHTML = q.options.map((o,i)=>`<div class="opt-btn ${i===q.correct?'correct':'dim'}"><span class="shape"></span>${escapeHtml(o)}</div>`).join('');
+  showScreen('screen-host-reveal');
+}
+
+async function hostShowLeaderboard(){
+  const qi = hostState.qIndex;
+  await storSet(`sess:${SESSION.code}:state`, { phase:'leaderboard', qIndex:qi, qStartTs:0 });
+  await renderLeaderboard('board-table', 'board-label', `After Question ${qi+1}`);
+  const isLast = qi >= hostMeta.questions.length - 1;
+  document.getElementById('host-next-btn').innerText = isLast ? 'Show Final Results →' : 'Next Question →';
+  showScreen('screen-host-board');
+}
+
+async function renderLeaderboard(tableId, labelId, labelText){
+  if(labelId) document.getElementById(labelId).innerText = labelText;
+  const keys = await storList(`sess:${SESSION.code}:player:`);
+  const vals = await Promise.all(keys.map(k=>storGet(k)));
+  const rows = vals.filter(v=>v && v.name).sort((a,b)=>b.score-a.score).slice(0,15);
+  const table = document.getElementById(tableId);
+  table.innerHTML = rows.map((r,i)=>`<tr><td class="rank">#${i+1}</td><td>${escapeHtml(r.name)}</td><td class="score">${r.score}</td></tr>`).join('') || '<tr><td>No scores yet.</td></tr>';
+}
+
+async function hostNext(){
+  const isLast = hostState.qIndex >= hostMeta.questions.length - 1;
+  if(isLast){
+    await storSet(`sess:${SESSION.code}:state`, { phase:'end', qIndex:hostState.qIndex, qStartTs:0 });
+    await renderLeaderboard('final-table', null, '');
+    showScreen('screen-host-end');
+  } else {
+    hostState.qIndex += 1;
+    await goToQuestion(hostState.qIndex);
+  }
+}
+
+/* ================= PLAYER SIDE ================= */
+let playerSession = { code:null, id:null, name:null, meta:null };
+let playerAnswered = {}; // qIndex -> {choice, correct}
+let playerPollTimer = null;
+let lastSeenState = null;
+
+// auto-fill code from URL
+(function initFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if(code){
+    document.getElementById('join-code-input').value = code.toUpperCase();
+    showScreen('screen-join-name');
+  }
+})();
+
+async function playerJoin(){
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  const name = document.getElementById('join-name-input').value.trim();
+  const errEl = document.getElementById('join-error');
+  errEl.style.display='none';
+  if(!code || !name){ errEl.innerText='Enter both a session code and your name.'; errEl.style.display='block'; return; }
+
+  const meta = await storGet(`sess:${code}:meta`);
+  if(!meta){ errEl.innerText='No active session with that code. Check with the host.'; errEl.style.display='block'; return; }
+
+  playerSession.code = code;
+  playerSession.name = name;
+  playerSession.id = genId();
+  playerSession.meta = meta;
+
+  await storSet(`sess:${code}:player:${playerSession.id}`, { name, score:0 });
+
+  document.getElementById('join-wait-name').innerText = `Welcome, ${name}`;
+  showScreen('screen-join-wait');
+  playerPollTimer = setInterval(playerPoll, 2000);
+  playerPoll();
+}
+
+async function playerPoll(){
+  const state = await storGet(`sess:${playerSession.code}:state`);
+  if(!state) return;
+  const changed = !lastSeenState || lastSeenState.phase!==state.phase || lastSeenState.qIndex!==state.qIndex;
+  if(!changed) {
+    // still update timer bar smoothly while in question phase
+    if(state.phase==='question'){ updatePlayerTimer(state); }
+    return;
+  }
+  lastSeenState = state;
+
+  if(state.phase==='lobby'){
+    showScreen('screen-join-wait');
+  } else if(state.phase==='question'){
+    renderPlayerQuestion(state);
+  } else if(state.phase==='reveal'){
+    await handlePlayerReveal(state);
+  } else if(state.phase==='leaderboard'){
+    showScreen('screen-join-between');
+  } else if(state.phase==='end'){
+    await showPlayerFinal();
+  }
+}
+
+function updatePlayerTimer(state){
+  const bar = document.getElementById('p-timerbar');
+  if(!bar || !state.qStartTs) return;
+  const elapsed = (Date.now()-state.qStartTs)/1000;
+  const pct = Math.max(0, 100 - (elapsed/(state.seconds||QUESTION_SECONDS))*100);
+  bar.style.width = pct+'%';
+}
+
+function renderPlayerQuestion(state){
+  const q = playerSession.meta.questions[state.qIndex];
+  document.getElementById('p-progress').innerText = `Question ${state.qIndex+1} of ${playerSession.meta.questions.length}`;
+  document.getElementById('p-qtext').innerText = q.text;
+  document.getElementById('p-locked').style.display = 'none';
+  const wrap = document.getElementById('p-opts');
+  wrap.innerHTML = '';
+  q.options.forEach((opt, oi)=>{
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = `<span class="shape"></span>${escapeHtml(opt)}`;
+    btn.onclick = ()=>playerAnswer(state.qIndex, oi);
+    wrap.appendChild(btn);
+  });
+  document.getElementById('p-timerbar').style.width='100%';
+  showScreen('screen-join-live');
+}
+
+function playerAnswer(qIndex, choice){
+  if(playerAnswered[qIndex] !== undefined) return; // already locked in
+  const q = playerSession.meta.questions[qIndex];
+  const correct = choice === q.correct;
+  playerAnswered[qIndex] = { choice, correct };
+  document.querySelectorAll('#p-opts .opt-btn').forEach((b,i)=>{
+    if(i!==choice) b.classList.add('dim');
+    b.disabled = true;
+  });
+  document.getElementById('p-locked').style.display='block';
+}
+
+async function handlePlayerReveal(state){
+  const qIndex = state.qIndex;
+  const q = playerSession.meta.questions[qIndex];
+  const ans = playerAnswered[qIndex];
+  const gotItRight = !!(ans && ans.correct);
+
+  const fb = document.getElementById('p-feedback');
+  if(!ans){
+    fb.innerText = "Time's up!";
+    fb.className = 'feedback bad';
+  } else if(gotItRight){
+    fb.innerText = 'Correct!';
+    fb.className = 'feedback good';
+  } else {
+    fb.innerText = 'Not quite!';
+    fb.className = 'feedback bad';
+  }
+  document.getElementById('p-reveal-text').innerText = `Answer: ${q.options[q.correct]}`;
+  showScreen('screen-join-reveal');
+
+  if(gotItRight){
+    const key = `sess:${playerSession.code}:player:${playerSession.id}`;
+    const current = await storGet(key);
+    const newScore = (current ? current.score : 0) + 100;
+    await storSet(key, { name: playerSession.name, score: newScore });
+  }
+}
+
+async function showPlayerFinal(){
+  const key = `sess:${playerSession.code}:player:${playerSession.id}`;
+  const me = await storGet(key);
+  document.getElementById('final-score').innerText = me ? me.score : 0;
+  showScreen('screen-join-end');
+  clearInterval(playerPollTimer);
+}
+</script>
+</body>
+</html>
