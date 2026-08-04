@@ -338,7 +338,6 @@
   <!-- HOST: LIVE QUESTION -->
   <div class="screen" id="screen-host-live">
     <div class="status-pill" id="host-progress">Question 1</div>
-    <div class="qtag-live" id="host-qtag"></div>
     <div class="qprompt" id="host-qtext"></div>
     <div class="opts-grid" id="host-opts"></div>
     <div class="timerbar-outer"><div class="timerbar-inner" id="host-timerbar" style="width:100%;"></div></div>
@@ -370,7 +369,7 @@
 
   <div class="screen" id="screen-host-end">
     <div class="eyebrow">Final Results</div>
-    <h1 class="title">Champion Intern-Slayer</h1>
+    <h1 class="title">Champion</h1>
     <div class="card" style="max-width:520px;">
       <table class="lb" id="final-table"></table>
     </div>
@@ -550,7 +549,7 @@ function renderQList(){
     div.className = 'qcard';
     div.innerHTML = `
       <div class="qcard-top">
-        <span class="qtag ${q.tag==='funny'?'funny':'serious'}">${q.tag==='funny'?'Funny':'Serious'}</span>
+        <span class="qtag serious">Question ${qi+1}</span>
         <button class="remove-q" onclick="removeQuestion(${qi})">Remove ✕</button>
       </div>
       <textarea placeholder="Question text" oninput="draftQuestions[${qi}].text=this.value">${escapeHtml(q.text)}</textarea>
@@ -559,14 +558,6 @@ function renderQList(){
           <input type="radio" name="correct-${qi}" ${q.correct===oi?'checked':''} onchange="draftQuestions[${qi}].correct=${oi}">
           <input type="text" value="${escapeHtml(opt)}" placeholder="Option ${oi+1}" oninput="draftQuestions[${qi}].options[${oi}]=this.value">
         </div>`).join('')}
-      <div style="margin-top:6px;">
-        <label style="display:inline-block; margin-right:10px;">
-          <input type="radio" name="tag-${qi}" ${q.tag==='serious'?'checked':''} onchange="draftQuestions[${qi}].tag='serious'; renderQList();" style="accent-color:var(--blueprint);"> Serious
-        </label>
-        <label style="display:inline-block;">
-          <input type="radio" name="tag-${qi}" ${q.tag==='funny'?'checked':''} onchange="draftQuestions[${qi}].tag='funny'; renderQList();" style="accent-color:var(--orange);"> Funny
-        </label>
-      </div>
     `;
     wrap.appendChild(div);
   });
@@ -691,10 +682,6 @@ async function goToQuestion(qi){
 function renderQuestionScreen(qi, startTs, seconds){
   const q = hostMeta.questions[qi];
   document.getElementById('host-progress').innerText = `Question ${qi+1} of ${hostMeta.questions.length}`;
-  const tagEl = document.getElementById('host-qtag');
-  tagEl.innerText = q.tag === 'funny' ? '+ Getting silly' : '+ Warm-up';
-  tagEl.style.background = q.tag==='funny' ? 'var(--lime)' : 'var(--dark-gray)';
-  tagEl.style.color = q.tag==='funny' ? '#000' : '#fff';
   document.getElementById('host-qtext').innerText = q.text;
   const optsWrap = document.getElementById('host-opts');
   optsWrap.innerHTML = q.options.map(o=>`<div class="opt-btn" style="cursor:default;"><span class="shape"></span>${escapeHtml(o)}</div>`).join('');
