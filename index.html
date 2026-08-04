@@ -516,14 +516,12 @@ function showScreen(id){
 /* ---------------- default placeholder questions ---------------- */
 function defaultQuestions(){
   return [
-    { text:"[Edit me] What year was RNGD founded / this office opened?", options:["Option A","Option B","Option C","Option D"], correct:0, tag:'serious' },
-    { text:"[Edit me] How many active job sites did our intern class visit this summer?", options:["Option A","Option B","Option C","Option D"], correct:1, tag:'serious' },
-    { text:"[Edit me] Which department did the most interns rotate through?", options:["Option A","Option B","Option C","Option D"], correct:2, tag:'serious' },
-    { text:"[Edit me] True or false style — pick the trade most interns said surprised them most.", options:["Option A","Option B","Option C","Option D"], correct:0, tag:'serious' },
-    { text:"[Edit me, funny] Which intern was (jokingly) most likely to get lost on a job site?", options:["Name A","Name B","Name C","Name D"], correct:1, tag:'funny' },
-    { text:"[Edit me, funny] What was the most-used phrase by our managers this summer?", options:["Option A","Option B","Option C","Option D"], correct:2, tag:'funny' },
-    { text:"[Edit me, funny] Which snack disappeared fastest from the office kitchen?", options:["Option A","Option B","Option C","Option D"], correct:0, tag:'funny' },
-    { text:"[Edit me, funny] Best guess: how many cups of coffee did the intern class drink combined?", options:["Option A","Option B","Option C","Option D"], correct:3, tag:'funny' }
+    { text:"What year was RNGD founded?", options:["2013","2012","2007","1999"], correct:0, tag:'serious' },
+    { text:"What does OSHA stand for?", options:["Office of Safety and Health Administration","Occupational Safety and Health Administration","Organization for Safe Handling and Assembly","Occupational Standards and Hazard Authority"], correct:1, tag:'serious' },
+    { text:"What department blames everyone else the most?", options:["Estimating","Project management","Depends on who you are in the room with\u2026","Operations"], correct:2, tag:'serious' },
+    { text:"Choose the correct definition:", options:["Butt Glazing Windows \u2014 method used to join panes of glass edge-to-edge with vertical mullions","Curtain wall \u2014 system which transfers loads back to the primary structure through anchors & bolts","Storefront \u2014 load-bearing system made of aluminum framing and glass","Insulated Glass Unit (IGU) \u2014 Two or more lites separated by a sealed airspace which consists of propane"], correct:1, tag:'serious' },
+    { text:"What do the interns spend the most time doing?", options:["Sitting on their phones","Walking aimlessly around","Bringing their boss coffee","Reading plans and specs"], correct:3, tag:'funny' },
+    { text:"What's the best way for an intern to make a good impression in a meeting?", options:["Come prepared and contribute thoughtfully","Nod slowly at everything like you already knew it","Bring donuts and take full credit for the meeting","Sit closest to the boss and mirror their body language"], correct:0, tag:'funny' }
   ];
 }
 
