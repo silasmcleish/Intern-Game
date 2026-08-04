@@ -324,7 +324,11 @@
       <button class="btn-secondary" onclick="reloadQr()">QR not loading? Retry</button>
     </div>
     <p class="warn" id="qr-error-note" style="display:none;">QR image didn't load (likely a network/firewall block). Use "Copy Link" above and drop it directly on your slide, or have people type the session code manually.</p>
-    <div class="count-line" id="lobby-count">0 interns in the room</div>
+    <div class="btn-row" style="margin:0 0 4px;">
+      <button class="btn-dark" onclick="copyHostSlideLink()">Copy Link for PowerPoint</button>
+    </div>
+    <p class="hint" style="margin-bottom:14px;">Paste that as a hyperlink on your intermission slide. Clicking it during your presentation jumps straight to this exact live game — Alt+Tab (or click your browser in the taskbar) to return to your slides afterward.</p>
+    <div class="count-line" id="lobby-count">0 employees in the room</div>
     <div class="roster" id="lobby-roster"></div>
     <div class="btn-row" style="margin-top:10px;">
       <button class="btn-primary" onclick="hostStartGame()">Start Game →</button>
@@ -660,7 +664,7 @@ async function copyJoinLink(){
 
 async function pollLobbyCount(){
   const keys = await storList(`sess:${SESSION.code}:player:`);
-  document.getElementById('lobby-count').innerText = `${keys.length} intern${keys.length===1?'':'s'} in the room`;
+  document.getElementById('lobby-count').innerText = `${keys.length} employee${keys.length===1?'':'s'} in the room`;
   // show up to 40 badges by fetching names (cheap during lobby, low frequency)
   const roster = document.getElementById('lobby-roster');
   roster.innerHTML = '';
@@ -679,10 +683,13 @@ async function hostStartGame(){
 let hostMeta = null;
 async function goToQuestion(qi){
   if(!hostMeta){ hostMeta = await storGet(`sess:${SESSION.code}:meta`); }
-  const q = hostMeta.questions[qi];
   const startTs = Date.now();
   await storSet(`sess:${SESSION.code}:state`, { phase:'question', qIndex:qi, qStartTs:startTs, seconds:QUESTION_SECONDS });
+  renderQuestionScreen(qi, startTs, QUESTION_SECONDS);
+}
 
+function renderQuestionScreen(qi, startTs, seconds){
+  const q = hostMeta.questions[qi];
   document.getElementById('host-progress').innerText = `Question ${qi+1} of ${hostMeta.questions.length}`;
   const tagEl = document.getElementById('host-qtag');
   tagEl.innerText = q.tag === 'funny' ? '+ Getting silly' : '+ Warm-up';
@@ -693,15 +700,16 @@ async function goToQuestion(qi){
   optsWrap.innerHTML = q.options.map(o=>`<div class="opt-btn" style="cursor:default;"><span class="shape"></span>${escapeHtml(o)}</div>`).join('');
 
   showScreen('screen-host-live');
-  runHostTimer(startTs);
+  runHostTimer(startTs, seconds);
 }
 
-function runHostTimer(startTs){
+function runHostTimer(startTs, seconds){
+  const duration = seconds || QUESTION_SECONDS;
   const bar = document.getElementById('host-timerbar');
   clearInterval(hostPollTimer);
   hostPollTimer = setInterval(()=>{
     const elapsed = (Date.now()-startTs)/1000;
-    const pct = Math.max(0, 100 - (elapsed/QUESTION_SECONDS)*100);
+    const pct = Math.max(0, 100 - (elapsed/duration)*100);
     bar.style.width = pct+'%';
     if(pct<=0){ clearInterval(hostPollTimer); }
   }, 150);
@@ -710,9 +718,12 @@ function runHostTimer(startTs){
 async function hostReveal(){
   clearInterval(hostPollTimer);
   const qi = hostState.qIndex;
-  const q = hostMeta.questions[qi];
   await storSet(`sess:${SESSION.code}:state`, { phase:'reveal', qIndex:qi, qStartTs:0, seconds:QUESTION_SECONDS });
+  renderRevealScreen(qi);
+}
 
+function renderRevealScreen(qi){
+  const q = hostMeta.questions[qi];
   document.getElementById('host-reveal-progress').innerText = `Question ${qi+1} — Answer`;
   document.getElementById('host-reveal-qtext').innerText = q.text;
   const wrap = document.getElementById('host-reveal-opts');
@@ -723,6 +734,10 @@ async function hostReveal(){
 async function hostShowLeaderboard(){
   const qi = hostState.qIndex;
   await storSet(`sess:${SESSION.code}:state`, { phase:'leaderboard', qIndex:qi, qStartTs:0 });
+  await renderLeaderboardScreen(qi);
+}
+
+async function renderLeaderboardScreen(qi){
   await renderLeaderboard('board-table', 'board-label', `After Question ${qi+1}`);
   const isLast = qi >= hostMeta.questions.length - 1;
   document.getElementById('host-next-btn').innerText = isLast ? 'Show Final Results →' : 'Next Question →';
@@ -738,16 +753,71 @@ async function renderLeaderboard(tableId, labelId, labelText){
   table.innerHTML = rows.map((r,i)=>`<tr><td class="rank">#${i+1}</td><td>${escapeHtml(r.name)}</td><td class="score">${r.score}</td></tr>`).join('') || '<tr><td>No scores yet.</td></tr>';
 }
 
+async function renderEndScreen(){
+  await renderLeaderboard('final-table', null, '');
+  showScreen('screen-host-end');
+}
+
 async function hostNext(){
   const isLast = hostState.qIndex >= hostMeta.questions.length - 1;
   if(isLast){
     await storSet(`sess:${SESSION.code}:state`, { phase:'end', qIndex:hostState.qIndex, qStartTs:0 });
-    await renderLeaderboard('final-table', null, '');
-    showScreen('screen-host-end');
+    await renderEndScreen();
   } else {
     hostState.qIndex += 1;
     await goToQuestion(hostState.qIndex);
   }
+}
+
+/* ---------------- HOST: RESUME AN ALREADY-CREATED SESSION FROM A LINK ----------------
+   This is what makes a plain hyperlink on a PowerPoint slide work: the slide link
+   points to ?hostcode=XXXX, and whichever tab opens that link jumps straight to
+   whatever screen the live game is currently on — no need to keep the original
+   "Create Session" tab open or re-click through setup. */
+async function resumeHostSession(code){
+  if(!firebaseIsConfigured()) return; // the warning banner already explains why
+  SESSION = { code };
+  hostMeta = await storGet(`sess:${code}:meta`);
+  if(!hostMeta){
+    alert(`No active session found for code ${code}. Double check the code, or create a new session if this one already ended.`);
+    return;
+  }
+  const state = (await storGet(`sess:${code}:state`)) || { phase:'lobby', qIndex:-1 };
+  hostState.qIndex = state.qIndex;
+  hostState.phase = state.phase;
+
+  if(state.phase === 'question'){
+    renderQuestionScreen(state.qIndex, state.qStartTs, state.seconds || QUESTION_SECONDS);
+  } else if(state.phase === 'reveal'){
+    renderRevealScreen(state.qIndex);
+  } else if(state.phase === 'leaderboard'){
+    await renderLeaderboardScreen(state.qIndex);
+  } else if(state.phase === 'end'){
+    await renderEndScreen();
+  } else {
+    // lobby (or unknown) — rebuild the lobby screen exactly like launchSession does
+    document.getElementById('lobby-code').innerText = code;
+    const url = buildJoinUrl(code);
+    document.getElementById('lobby-link').innerText = url;
+    currentJoinUrl = url;
+    renderQrImage(url);
+    showScreen('screen-host-lobby');
+    clearInterval(lobbyPollTimer);
+    pollLobbyCount();
+    lobbyPollTimer = setInterval(pollLobbyCount, 2500);
+  }
+}
+
+function copyHostSlideLink(){
+  if(!SESSION || !SESSION.code){ return; }
+  const base = window.location.href.split('?')[0].split('#')[0];
+  const url = `${base}?hostcode=${SESSION.code}`;
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn = event.target;
+    const old = btn.innerText;
+    btn.innerText = 'Copied!';
+    setTimeout(()=>{ btn.innerText = old; }, 1500);
+  }).catch(()=>{ alert(url); });
 }
 
 /* ================= PLAYER SIDE ================= */
@@ -762,7 +832,10 @@ let currentQDuration = null;
 (function initFromUrl(){
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
-  if(code){
+  const hostcode = params.get('hostcode');
+  if(hostcode){
+    resumeHostSession(hostcode.toUpperCase());
+  } else if(code){
     document.getElementById('join-code-input').value = code.toUpperCase();
     showScreen('screen-join-name');
   }
